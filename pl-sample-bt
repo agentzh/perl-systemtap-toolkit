@@ -282,7 +282,8 @@ function gv_efullname(gv) {
 }
 
 function CvGV(sv) {
-    return \@cast($sv->sv_any, "XPVCV", "$perl_path")->xcv_gv
+    return \@choose_defined(\@cast($sv->sv_any, "XPVCV", "$perl_path")->xcv_gv,
+                            \@cast($sv->sv_any, "XPVCV", "$perl_path")->xcv_gv_u->xcv_gv)
 }
 
 probe timer.profile {

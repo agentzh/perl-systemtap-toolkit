@@ -59,7 +59,7 @@ Below is a simple example Perl-land flamegraph
 
 http://agentzh.org/misc/flamegraph/perl-silly.svg
 
-This tool has been tested with perl 5.14.4 and 5.16.2.
+This tool has been tested with perl 5.18.0, 5.16.3, and 5.14.4.
 
 Bugs and Patches
 ================
