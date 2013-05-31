@@ -61,26 +61,10 @@ http://agentzh.org/misc/flamegraph/perl-silly.svg
 
 This tool has been tested with perl 5.14.4 and 5.16.2.
 
-Community
-=========
-
-English Mailing List
---------------------
-
-The [openresty-en](https://groups.google.com/group/openresty-en) mailing list is for English speakers.
-
-Chinese Mailing List
---------------------
-
-The [openresty](https://groups.google.com/group/openresty) mailing list is for Chinese speakers.
-
 Bugs and Patches
 ================
 
-Please submit bug reports, wishlists, or patches by
-
-1. creating a ticket on the [GitHub Issue Tracker](http://github.com/agentzh/perl-systemtap-toolkit/issues),
-1. or posting to the [OpenResty community](http://wiki.nginx.org/HttpLuaModule#Community).
+Please submit bug reports, wishlists, or patches by creating a ticket on the [GitHub Issue Tracker](http://github.com/agentzh/perl-systemtap-toolkit/issues).
 
 TODO
 ====
