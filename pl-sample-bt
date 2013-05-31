@@ -1,0 +1,400 @@
+#!/usr/bin/env perl
+
+# Copyright (C) Yichun Zhang (agentzh)
+
+use 5.006001;
+use strict;
+use warnings;
+
+use Getopt::Std qw( getopts );
+
+my %opts;
+
+getopts("a:dhl:p:t:", \%opts)
+    or die usage();
+
+if ($opts{h}) {
+    print usage();
+    exit;
+}
+
+my $pid = $opts{p}
+    or die "No process pid specified by the -p option.\n";
+
+if ($pid !~ /^\d+$/) {
+    die "Bad -p option value \"$pid\": not look like a pid.\n";
+}
+
+my $condition = "pid() == target()";
+
+my $limit = $opts{l} || 1024;
+
+my $time = $opts{t};
+
+if (defined $time && $time !~ /^\d+$/) {
+    die "Bad time value specified in the -t option: $time\n";
+}
+
+my $stap_args = $opts{a} || '';
+
+if ($stap_args !~ /\b-D\s*MAXACTION=/) {
+    $stap_args .= " -DMAXACTION=100000"
+}
+
+if ($stap_args !~ /\b-D\s*MAXMAPENTRIES=/) {
+    $stap_args .= " -DMAXMAPENTRIES=5000"
+}
+
+if ($stap_args !~ /\b-D\s*MAXBACKTRACE=/) {
+    $stap_args .= " -DMAXBACKTRACE=200"
+}
+
+if ($stap_args !~ /\b-D\s*MAXSTRINGLEN=2048/) {
+    $stap_args .= " -DMAXSTRINGLEN=2048"
+}
+
+if ($^O ne 'linux') {
+    die "Only linux is supported but I am on $^O.\n";
+}
+
+my $exec_file = "/proc/$pid/exe";
+if (!-f $exec_file) {
+    die "Nginx process $pid is not running or ",
+        "you do not have enough permissions.\n";
+}
+
+my $perl_path = readlink $exec_file;
+
+my $ver = `stap --version 2>&1`;
+if (!defined $ver) {
+    die "Systemtap not installed or its \"stap\" utility is not visible to "
+        . "the PATH environment: $!\n";
+}
+
+if ($ver =~ /version\s+(\d+\.\d+)/i) {
+    my $v = $1;
+    if ($v < 2.1) {
+        die "ERROR: at least systemtap 2.1 is required but found $v\n";
+    }
+
+} else {
+    die "ERROR: unknown version of systemtap:\n$ver\n";
+}
+
+my $tip;
+if (defined $time) {
+    $tip = "Please wait for $time seconds.";
+
+} else {
+    $tip = "Hit Ctrl-C to end.";
+}
+
+my $preamble = <<_EOC_;
+probe begin {
+    warn(sprintf("Sampling %d ($perl_path) for Perl-land backtraces...\\n$tip\\n", target()))
+}
+_EOC_
+
+my $cx = qq{\@cast(cx, "PERL_CONTEXT", "$perl_path")};
+my $ccstack = qq{\@cast(ccstack, "PERL_CONTEXT", "$perl_path")};
+my $cxstk = qq{\@cast(cxstk, "PERL_CONTEXT", "$perl_path")};
+my $PL_curstackinfo = qq{\@cast(PL_curstackinfo, "PERL_SI", "$perl_path")};
+my $top_si = qq{\@cast(top_si, "PERL_SI", "$perl_path")};
+my $cxstack_ix = qq{$PL_curstackinfo->si_cxix};
+my $cxstack = qq{$PL_curstackinfo->si_cxstack};
+my $sv = qq{\@cast(sv, "SV", "$perl_path")};
+my $gv = qq{\@cast(gv, "GV", "$perl_path")};
+my $hv = qq{\@cast(hv, "HV", "$perl_path")};
+my $hvaux = qq{\@cast(hvaux, "struct xpvhv_aux", "$perl_path")};
+
+my $CXTYPEMASK = "0xf";
+my $CXt_SUB = '8';
+my $CXt_FORMAT = '9';
+my $CXt_EVAL = '10';
+
+my $SVt_PVGV = '9';
+my $SVt_PVLV = '10';
+
+my $SVp_POK = '0x00004000';
+my $SVp_SCREAM = '0x00008000';
+my $SVpgv_GP = $SVp_SCREAM;
+
+my $SVf_OOK = '0x02000000';
+
+my $SVTYPEMASK = '0xff';
+
+my $blk_sub = 'cx_u->cx_blk->blk_u->blku_sub';
+my $cx_type = 'cx_u->cx_subst->sbu_type';
+
+my $PERLSI_MAIN = '1';
+
+my $sizeof_PERL_CONTEXT = qq{\&\@cast(0, "PERL_CONTEXT", "$perl_path")[1]};
+
+my $stap_src = <<_EOC_;
+$preamble
+
+global bts;
+
+function CxTYPE(cx) {
+    return $cx->$cx_type & $CXTYPEMASK
+}
+
+function dopoptosub_at(cxstk, startingblock) {
+    for (i =  startingblock; i >= 0; i--) {
+        cx = \&$cxstk\[i]
+        typ = CxTYPE(cx)
+        if (typ == $CXt_EVAL || typ == $CXt_SUB || typ == $CXt_FORMAT) {
+            return i
+        }
+    }
+    return i
+}
+
+function SvTYPE(sv) {
+    return $sv->sv_flags & $SVTYPEMASK
+}
+
+function isGV(sv) {
+    return SvTYPE(sv) == $SVt_PVGV
+}
+
+function SvFLAGS(sv) {
+    return $sv->sv_flags
+}
+
+function GvEGV(gv) {
+    return $gv->sv_u->svu_gp->gp_egv
+}
+
+function isGV_with_GP(gv) {
+    typ = SvTYPE(gv)
+    return (SvFLAGS(gv) & ($SVp_POK|$SVpgv_GP)) == $SVpgv_GP
+           && (typ == $SVt_PVGV || typ == $SVt_PVLV)
+}
+
+function GvEGVx(gv) {
+    return isGV_with_GP(gv) ? GvEGV(gv) : 0
+}
+
+function GvSTASH(gv) {
+    return \@cast($gv->sv_any, "XPVGV", "$perl_path")->xnv_u->xgv_stash
+}
+
+function GvNAMELEN(gv) {
+    return \@cast($gv->sv_any, "XPVGV", "$perl_path")->xiv_u->xivu_namehek->hek_len
+}
+
+function GvNAME(gv) {
+    return \@cast($gv->sv_any, "XPVGV", "$perl_path")->xiv_u->xivu_namehek->hek_key
+}
+
+function SvOOK(hv) {
+    return $hv->sv_flags & $SVf_OOK
+}
+
+function HvMAX(hv) {
+    return \@cast($hv->sv_any, "XPVHV", "$perl_path")->xhv_max
+}
+
+function HvAUX(hv) {
+    return \&$hv->sv_u->svu_hash\[HvMAX(hv) + 1\]
+}
+
+function HvNAMELEN_get(hv) {
+    if (!SvOOK(hv)) {
+        return 0
+    }
+
+    hvaux = HvAUX(hv)
+    if (!$hvaux->xhv_name_u->xhvnameu_name) {
+        return 0
+    }
+
+    if ($hvaux->xhv_name_count) {
+        hek_nn = $hvaux->xhv_name_u->xhvnameu_names\[0]
+
+    } else {
+        hek_nn = $hvaux->xhv_name_u->xhvnameu_name
+    }
+
+    if (!hek_nn) {
+        return 0
+    }
+
+    return \@cast(hek_nn, "struct hek", "$perl_path")->hek_len
+}
+
+function HvNAME_get(hv) {
+    if (!SvOOK(hv)) {
+        return 0
+    }
+
+    hvaux = HvAUX(hv)
+    if (!$hvaux->xhv_name_u->xhvnameu_name) {
+        return 0
+    }
+
+    if ($hvaux->xhv_name_count) {
+        hek_nn = $hvaux->xhv_name_u->xhvnameu_names\[0]
+
+    } else {
+        hek_nn = $hvaux->xhv_name_u->xhvnameu_name
+    }
+
+    if (!hek_nn) {
+        return 0
+    }
+
+    return \@cast(hek_nn, "struct hek", "$perl_path")->hek_key
+}
+
+function gv_efullname(gv) {
+    egv = GvEGVx(gv)
+    if (egv) {
+        //printf("found egv=%p\\n", egv)
+        gv = egv
+    }
+
+    //printf("found gv=%p\\n", gv)
+    hv = GvSTASH(gv)
+    //printf("hv = %p\\n", hv)
+
+    if (!hv) {
+        return "(bad)"
+    }
+
+    func = user_string_n(GvNAME(gv), GvNAMELEN(gv))
+
+    name = HvNAME_get(hv)
+    if (name) {
+        namelen = HvNAMELEN_get(hv)
+        package = user_string_n(name, namelen)
+
+        if (package == "main") {
+            return func
+        }
+
+    } else {
+        package = "__ANON__"
+    }
+
+    return package . "::" . func
+}
+
+function CvGV(sv) {
+    return \@cast($sv->sv_any, "XPVCV", "$perl_path")->xcv_gv
+}
+
+probe timer.profile {
+    if ($condition) {
+        PL_curstackinfo = \@var("PL_curstackinfo\@perl.c", "$perl_path")
+        //printf("stackinfo: %p\\n", stackinfo)
+        //PL_curinterp = \@var("PL_curinterp\@perl.c", "$perl_path")
+        //printf("curinterp: %p\\n", PL_curinterp)
+
+        cxix = dopoptosub_at($cxstack, $cxstack_ix)
+        //printf("cxix = %d\\n", cxix)
+
+        ccstack = $cxstack
+        top_si = PL_curstackinfo
+        bt = ""
+
+        for (;;) {
+            /* we may be in a higher stacklevel, so dig down deeper */
+            while (cxix < 0 && $top_si->si_type != $PERLSI_MAIN) {
+                top_si = $top_si->si_prev
+                ccstack = $top_si->si_cxstack
+                cxix = dopoptosub_at(ccstack, $top_si->si_cxix)
+            }
+
+            if (cxix < 0) {
+                break
+            }
+
+            cx = \&$ccstack\[cxix]
+            //printf("%d: cx=%p\\n", cxix, cx)
+
+            typ = CxTYPE(cx)
+            if (typ == $CXt_SUB || typ == $CXt_FORMAT) {
+                cvgv = CvGV($cx->$blk_sub->cv)
+                //printf("cvgv: %p\\n", cvgv);
+
+                if (isGV(cvgv)) {
+                    func = gv_efullname(cvgv)
+
+                } else {
+                    func = "(unknown)"
+                }
+
+            } else {
+                func = "(eval)"
+            }
+
+            //printf("%d: frame=%s\\n", cxix, func)
+            bt .= func . "\\n"
+
+            cxix = dopoptosub_at(ccstack, cxix - 1)
+        }
+
+        bts[bt] <<< 1
+    }
+}
+
+probe end {
+    nstacks = 0
+    foreach (bt in bts limit 10) {
+        nstacks++
+    }
+
+    if (nstacks == 0) {
+        warn(sprintf("Too few backtraces (%d) found. Quitting now...\\n", nstacks))
+
+    } else {
+
+        foreach (bt in bts- limit $limit) {
+            printf("%s\\t%d\\n", bt, \@count(bts[bt]))
+        }
+    }
+}
+_EOC_
+
+if (defined $time) {
+    $stap_src .= <<_EOC_;
+
+probe timer.s($time) {
+    exit()
+}
+_EOC_
+}
+
+if ($opts{d}) {
+    print $stap_src;
+    exit;
+}
+
+open my $in, "|stap --skip-badvars --all-modules -x $pid -d '$perl_path' --ldd $stap_args -"
+    or die "Cannot run stap: $!\n";
+
+print $in $stap_src;
+
+close $in;
+
+sub usage {
+    return <<'_EOC_';
+Usage:
+    pl-sample-bt [optoins]
+
+Options:
+    -a <args>           Pass extra arguments to the stap utility.
+    -d                  Dump out the systemtap script source.
+    -h                  Print this usage.
+    -l <count>          Only output <count> most frenquent backtrace samples.
+                        (Default to 1024)
+    -p <pid>            Specify the user process pid.
+    -t <seconds>        Specify the number of seconds for sampling.
+
+Examples:
+    pl-sample-bt -p 12345 -t 10
+    pl-sample-bt -p 12345 -t 5 -a '-DMAXACTION=100000'
+_EOC_
+}
