@@ -1,7 +1,7 @@
 NAME
 ====
 
-nginx-systemtap-toolkit - Real-time analyzing and diagnosing tools for Nginx based on [SystemTap](http://sourceware.org/systemtap/wiki)
+perl-systemtap-toolkit - Real-time analyzing and diagnosing tools for perl 5 based on [SystemTap](http://sourceware.org/systemtap/wiki)
 
 Status
 ======
@@ -28,7 +28,7 @@ Permissions
 Running systemtap-based tools requires special user permissions. To prevent running
 these tools with the root account,
 you can add your own (non-root) account name to the `stapusr` and `staprun` user groups.
-But if the user account running the Nginx process is different from your current
+But if the user account running the perl process is different from your current
 user account, then you will still be required to run "sudo" or other means to run these tools
 with root access.
 
@@ -79,7 +79,7 @@ Bugs and Patches
 
 Please submit bug reports, wishlists, or patches by
 
-1. creating a ticket on the [GitHub Issue Tracker](http://github.com/agentzh/nginx-systemtap-toolkit/issues),
+1. creating a ticket on the [GitHub Issue Tracker](http://github.com/agentzh/perl-systemtap-toolkit/issues),
 1. or posting to the [OpenResty community](http://wiki.nginx.org/HttpLuaModule#Community).
 
 TODO
