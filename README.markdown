@@ -95,7 +95,7 @@ Copyright & License
 
 This module is licenced under the BSD license.
 
-Copyright (C) 2012-2013 by Yichun Zhang (agentzh) <agentzh@gmail.com>, CloudFlare Inc.
+Copyright (C) 2013 by Yichun Zhang (agentzh) <agentzh@gmail.com>, CloudFlare Inc.
 
 All rights reserved.
 
