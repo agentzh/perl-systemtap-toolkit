@@ -85,6 +85,11 @@ if ($major_ver ne '5') {
     die "Only perl 5 is supported.\n";
 }
 
+if ($out =~ /-thread-multi\b/) {
+    die "ERROR: $perl_path was built with the perl threads feature, ",
+        "which is not supported yet.\n";
+}
+
 if ($minor_ver > 18 || $minor_ver < 10) {
     warn "WARNING: perl $major_ver.$minor_ver is not officially supported (yet).\n";
 }
