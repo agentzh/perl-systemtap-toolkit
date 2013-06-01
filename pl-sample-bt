@@ -200,52 +200,71 @@ function HvAUX(hv) {
     return \&$hv->sv_u->svu_hash\[HvMAX(hv) + 1\]
 }
 
-function HvNAMELEN_get(hv) {
-    if (!SvOOK(hv)) {
-        return 0
-    }
+function HvNAMELEN_get(hvaux) {
+    if (\@defined($hvaux->xhv_name_u->xhvnameu_name)) {
+        /* for perl 5.12.0+ */
 
-    hvaux = HvAUX(hv)
-    if (!$hvaux->xhv_name_u->xhvnameu_name) {
-        return 0
-    }
+        if (!$hvaux->xhv_name_u->xhvnameu_name) {
+            return 0
+        }
 
-    if ($hvaux->xhv_name_count) {
-        hek_nn = $hvaux->xhv_name_u->xhvnameu_names\[0]
+        if ($hvaux->xhv_name_count) {
+            hek_nn = $hvaux->xhv_name_u->xhvnameu_names\[0]
+
+        } else {
+            hek_nn = $hvaux->xhv_name_u->xhvnameu_name
+        }
+
+        if (!hek_nn) {
+            return 0
+        }
+
+        return \@cast(hek_nn, "struct hek", "$perl_path")->hek_len
 
     } else {
-        hek_nn = $hvaux->xhv_name_u->xhvnameu_name
-    }
 
-    if (!hek_nn) {
-        return 0
-    }
+        /* for perl versions < 5.12.0 */
 
-    return \@cast(hek_nn, "struct hek", "$perl_path")->hek_len
+        if (!$hvaux->xhv_name) {
+            return 0
+        }
+
+        return $hvaux->xhv_name->hek_len
+    }
 }
 
-function HvNAME_get(hv) {
-    if (!SvOOK(hv)) {
-        return 0
-    }
+function HvNAME_get(hvaux) {
 
-    hvaux = HvAUX(hv)
-    if (!$hvaux->xhv_name_u->xhvnameu_name) {
-        return 0
-    }
+    if (\@defined($hvaux->xhv_name_u->xhvnameu_name)) {
+        /* for perl 5.12.0+ */
 
-    if ($hvaux->xhv_name_count) {
-        hek_nn = $hvaux->xhv_name_u->xhvnameu_names\[0]
+        if (!$hvaux->xhv_name_u->xhvnameu_name) {
+            return 0
+        }
+
+        if ($hvaux->xhv_name_count) {
+            hek_nn = $hvaux->xhv_name_u->xhvnameu_names\[0]
+
+        } else {
+            hek_nn = $hvaux->xhv_name_u->xhvnameu_name
+        }
+
+        if (!hek_nn) {
+            return 0
+        }
+
+        return \@cast(hek_nn, "struct hek", "$perl_path")->hek_key
 
     } else {
-        hek_nn = $hvaux->xhv_name_u->xhvnameu_name
-    }
 
-    if (!hek_nn) {
-        return 0
-    }
+        /* for perl versions < 5.12.0 */
 
-    return \@cast(hek_nn, "struct hek", "$perl_path")->hek_key
+        if (!$hvaux->xhv_name) {
+            return 0
+        }
+
+        return $hvaux->xhv_name->hek_key
+    }
 }
 
 function gv_efullname(gv) {
@@ -265,9 +284,18 @@ function gv_efullname(gv) {
 
     func = user_string_n(GvNAME(gv), GvNAMELEN(gv))
 
-    name = HvNAME_get(hv)
+    /* HvNAME_get */
+
+    if (!SvOOK(hv)) {
+        name = 0
+
+    } else {
+        hvaux = HvAUX(hv)
+        name = HvNAME_get(hvaux)
+    }
+
     if (name) {
-        namelen = HvNAMELEN_get(hv)
+        namelen = HvNAMELEN_get(hvaux)
         package = user_string_n(name, namelen)
 
         if (package == "main") {
@@ -282,8 +310,8 @@ function gv_efullname(gv) {
 }
 
 function CvGV(sv) {
-    return \@choose_defined(\@cast($sv->sv_any, "XPVCV", "$perl_path")->xcv_gv,
-                            \@cast($sv->sv_any, "XPVCV", "$perl_path")->xcv_gv_u->xcv_gv)
+    return \@choose_defined(\@cast($sv->sv_any, "XPVCV", "$perl_path")->xcv_gv_u->xcv_gv, /* for 5.18.0+ */
+                            \@cast($sv->sv_any, "XPVCV", "$perl_path")->xcv_gv /* pre 5.18.0 */ )
 }
 
 probe timer.profile {
