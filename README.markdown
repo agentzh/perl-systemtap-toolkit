@@ -55,9 +55,13 @@ The resulting output file `a.bt` can then be used to generate a Flame Graph by u
 where both the `stackcollapse-stap.pl` and `flamegraph.pl` are from the FlameGraph toolkit.
 If everything goes right, you can now use your web browser to open the `a.svg` file.
 
-Below is a simple example Perl-land flamegraph
+Below is some sample Perl-land flamegraph
 
 http://agentzh.org/misc/flamegraph/perl-silly.svg
+
+http://agentzh.org/misc/flamegraph/perl-test-nginx-socket.svg
+
+We can see how the CPU time is distributed among all the Perl code paths quantitatively.
 
 This tool has been tested with perl 5.18.0, 5.16.3, 5.14.4, 5.12.5, and 5.10.1.
 
