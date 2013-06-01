@@ -59,7 +59,7 @@ Below is a simple example Perl-land flamegraph
 
 http://agentzh.org/misc/flamegraph/perl-silly.svg
 
-This tool has been tested with perl 5.18.0, 5.16.3, 5.14.4, and 5.12.5.
+This tool has been tested with perl 5.18.0, 5.16.3, 5.14.4, 5.12.5, and 5.10.1.
 
 Perl builds with ithreads enabled (i.e., passing the `-Dusethreads` option to perl's `Config` script) are not supported yet.
 
