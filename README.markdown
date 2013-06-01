@@ -83,7 +83,7 @@ Yichun "agentzh" Zhang (章亦春), CloudFlare Inc.
 Copyright & License
 ===================
 
-This module is licenced under the BSD license.
+This project is licenced under the BSD license.
 
 Copyright (C) 2013 by Yichun Zhang (agentzh) <agentzh@gmail.com>, CloudFlare Inc.
 
