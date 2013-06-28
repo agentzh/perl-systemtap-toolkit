@@ -102,8 +102,8 @@ if (!defined $ver) {
 
 if ($ver =~ /version\s+(\d+\.\d+)/i) {
     my $v = $1;
-    if ($v < 2.1) {
-        die "ERROR: at least systemtap 2.1 is required but found $v\n";
+    if ($v < 2.3) {
+        die "ERROR: the current systemtap git master is required but found $v\n";
     }
 
 } else {
@@ -360,9 +360,9 @@ function CvGV(sv) {
 
 probe timer.profile {
     if ($condition) {
-        PL_curstackinfo = \@var("PL_curstackinfo\@perl.c", "$perl_path")
+        PL_curstackinfo = \@var("PL_curstackinfo", "$perl_path")
         //printf("stackinfo: %p\\n", stackinfo)
-        //PL_curinterp = \@var("PL_curinterp\@perl.c", "$perl_path")
+        //PL_curinterp = \@var("PL_curinterp", "$perl_path")
         //printf("curinterp: %p\\n", PL_curinterp)
 
         cxix = dopoptosub_at($cxstack, $cxstack_ix)
