@@ -11,7 +11,7 @@ These scripts are considered experimental.
 Prerequisites
 =============
 
-You need the current systemtap git master and at least perl 5.6.1+ to run these tools on your Linux system.
+You need the systemtap 2.3+ and at least perl 5.6.1+ to run these tools on your Linux system.
 
 Also, you should ensure the (DWARF) debuginfo of your perl binary being analyzed is already enabled (or installed separately).
 
