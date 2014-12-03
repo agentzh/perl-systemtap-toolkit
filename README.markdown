@@ -15,7 +15,19 @@ You need the systemtap 2.3+ and at least perl 5.6.1+ to run these tools on your 
 
 Also, you should ensure the (DWARF) debuginfo of your perl binary being analyzed is already enabled (or installed separately).
 
-If you compile perl from source, then ensure you pass the `-Doptimize=-g` option to the `Configure` command line.
+If you compile perl from source, then ensure you pass the `-Doptimize='-g -O2'` option to the `Configure` command line. For example,
+
+    cd /tmp
+    wget http://www.cpan.org/src/5.0/perl-5.16.3.tar.gz
+    tar -xzvf perl-5.16.3.tar.gz
+
+    cd perl-5.16.3/
+    rm -f config.sh
+    sh Configure -Doptimize='-g -O2' -Dprefix=/opt/perl -des
+    make -j9
+    sudo make install
+
+    /opt/perl/bin/perl -v
 
 If you are on Linux kernels older than 3.5, then you may have to apply the [utrace patch](http://sourceware.org/systemtap/wiki/utrace) (if not yet) to your kernel to get
 user-space tracing support for your systemtap installation. But if you are using Linux distributions in the RedHat family (like RHEL, CentOS, and Fedora), then your old kernel should already has the utrace patch applied.
