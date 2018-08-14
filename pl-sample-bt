@@ -373,7 +373,7 @@ probe timer.profile {
         top_si = PL_curstackinfo
         bt = ""
 
-        for (;;) {
+        for (i = 0; i < 50; i++) {
             /* we may be in a higher stacklevel, so dig down deeper */
             while (cxix < 0 && $top_si->si_type != $PERLSI_MAIN) {
                 top_si = $top_si->si_prev

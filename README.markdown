@@ -90,14 +90,14 @@ TODO
 Author
 ======
 
-Yichun "agentzh" Zhang (章亦春), CloudFlare Inc.
+Yichun "agentzh" Zhang (章亦春), OpenResty Inc.
 
 Copyright & License
 ===================
 
 This project is licenced under the BSD license.
 
-Copyright (C) 2013 by Yichun Zhang (agentzh) <agentzh@gmail.com>, CloudFlare Inc.
+Copyright (C) 2013 by Yichun Zhang (agentzh) <agentzh@gmail.com>, OpenResty Inc.
 
 All rights reserved.
 
