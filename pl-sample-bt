@@ -59,7 +59,7 @@ if ($^O ne 'linux') {
 
 my $exec_file = "/proc/$pid/exe";
 if (!-f $exec_file) {
-    die "Nginx process $pid is not running or ",
+    die "Perl process $pid is not running or ",
         "you do not have enough permissions.\n";
 }
 
