@@ -6,7 +6,7 @@ perl-systemtap-toolkit - Real-time analyzing and diagnosing tools for perl 5 bas
 Status
 ======
 
-These scripts are considered experimental.
+**IMPORTANT!!! This project is no longer maintained and our focus has been shifted to a much better dynamic tracing platform named [OpenResty XRay](https://openresty.com/en/xray). Existing users of the tools here are recommended to switch too.**
 
 Prerequisites
 =============
@@ -46,6 +46,10 @@ with root access.
 
 Tools
 =====
+
+**IMPORTANT!!! The tools below are no longer maintained and our focus has been
+shifted to a much better dynamic tracing platform named
+[OpenResty XRay](https://openresty.com/en/xray). Existing users of the tools here are recommended to switch too.**
 
 pl-sample-bt
 ------------
